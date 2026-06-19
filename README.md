@@ -34,26 +34,7 @@ sentimentiq/
 └── README.md
 ```
 
-## Getting Started
 
-### 1. Install dependencies
-```bash
-cd backend
-pip install -r requirements.txt
-```
-
-### 2. Train the model
-Open and run `notebook/train_model.ipynb` — this generates the `.pkl` files in `/model`.
-
-### 3. Run the API
-```bash
-cd backend
-uvicorn main:app --reload
-```
-API runs at `http://localhost:8000`
-
-### 4. Open the frontend
-Open `frontend/index.html` in your browser.
 
 ## API Endpoints
 
