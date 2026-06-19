@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SentimentIQ — Real-time Sentiment Analysis</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #f5f5f3; color: #1a1a1a; min-height: 100vh; }
+
+    .container { max-width: 740px; margin: 0 auto; padding: 32px 16px 64px; }
+
+    /* Header */
+    header { text-align: center; margin-bottom: 32px; }
+    header h1 { font-size: 28px; font-weight: 600; margin-bottom: 6px; }
+    header h1 span { color: #534AB7; }
+    header p { font-size: 14px; color: #888; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 6px; margin-bottom: 20px; }
+    .tab { padding: 8px 20px; font-size: 13px; border: 1px solid #e0e0e0; border-radius: 8px; background: #fff; cursor: pointer; color: #666; transition: all 0.15s; }
+    .tab.active { background: #534AB7; color: #fff; border-color: #534AB7; font-weight: 500; }
+
+    /* Card */
+    .card { background: #fff; border: 1px solid #ebebeb; border-radius: 12px; padding: 24px; margin-bottom: 16px; }
+
+    /* Textarea */
+    textarea { width: 100%; min-height: 120px; padding: 12px; font-size: 14px; font-family: 'Inter', sans-serif; border: 1px solid #e0e0e0; border-radius: 8px; resize: vertical; outline: none; color: #1a1a1a; transition: border-color 0.15s; }
+    textarea:focus { border-color: #534AB7; }
+
+    .char-count { font-size: 11px; color: #aaa; text-align: right; margin-top: 4px; }
+
+    /* Buttons */
+    .btn-row { display: flex; gap: 8px; margin-top: 12px; }
+    .btn-primary { padding: 10px 24px; font-size: 13px; font-weight: 500; background: #534AB7; color: #fff; border: none; border-radius: 8px; cursor: pointer; transition: background 0.15s; }
+    .btn-primary:hover { background: #3C3489; }
+    .btn-primary:disabled { background: #b0a8e0; cursor: not-allowed; }
+    .btn-secondary { padding: 10px 16px; font-size: 13px; background: transparent; border: 1px solid #e0e0e0; border-radius: 8px; cursor: pointer; color: #666; }
+    .btn-secondary:hover { background: #f5f5f5; }
+
+    /* Result */
+    .result { margin-top: 20px; display: none; }
+    .result-badge { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 50px; font-size: 15px; font-weight: 600; margin-bottom: 16px; }
+    .badge-positive { background: #E1F5EE; color: #085041; }
+    .badge-negative { background: #FAECE7; color: #712B13; }
+    .badge-neutral  { background: #F1EFE8; color: #444441; }
+
+    .confidence-label { font-size: 12px; color: #888; margin-bottom: 6px; }
+    .bar-wrap { background: #f0f0f0; border-radius: 20px; height: 8px; margin-bottom: 12px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 20px; transition: width 0.6s ease; }
+    .fill-positive { background: #1D9E75; }
+    .fill-negative { background: #E05A2B; }
+    .fill-neutral  { background: #888; }
+
+    .prob-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 16px; }
+    .prob-box { background: #f9f9f7; border-radius: 8px; padding: 10px; text-align: center; }
+    .prob-box .val { font-size: 18px; font-weight: 600; }
+    .prob-box .lbl { font-size: 11px; color: #888; margin-top: 2px; }
+    .pos-val { color: #1D9E75; }
+    .neg-val { color: #E05A2B; }
+    .neu-val { color: #888; }
+
+    /* Batch */
+    .batch-input { width: 100%; min-height: 160px; padding: 12px; font-size: 13px; font-family: 'Inter', sans-serif; border: 1px solid #e0e0e0; border-radius: 8px; resize: vertical; outline: none; color: #1a1a1a; }
+    .batch-input:focus { border-color: #534AB7; }
+    .batch-hint { font-size: 11px; color: #aaa; margin-top: 4px; }
+
+    .batch-results { margin-top: 20px; display: none; }
+    .batch-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border: 1px solid #ebebeb; border-radius: 8px; margin-bottom: 8px; font-size: 13px; background: #fff; }
+    .batch-text { flex: 1; color: #444; margin-right: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .mini-badge { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 500; white-space: nowrap; }
+
+    /* Examples */
+    .examples { margin-top: 16px; }
+    .examples p { font-size: 12px; color: #888; margin-bottom: 8px; }
+    .example-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip { padding: 5px 12px; font-size: 12px; border: 1px solid #e0e0e0; border-radius: 20px; cursor: pointer; background: #fff; color: #555; transition: all 0.15s; }
+    .chip:hover { border-color: #534AB7; color: #534AB7; }
+
+    /* Loader */
+    .loader { display: none; font-size: 13px; color: #888; margin-top: 12px; }
+
+    /* API info */
+    .api-box { background: #1a1a2e; border-radius: 10px; padding: 16px; margin-top: 12px; }
+    .api-box pre { color: #a8e6cf; font-size: 12px; font-family: monospace; overflow-x: auto; white-space: pre-wrap; }
+    .api-label { font-size: 11px; color: #888; margin-bottom: 8px; }
+
+    .error-msg { background: #FAECE7; color: #712B13; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-top: 12px; display: none; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>Sentiment<span>IQ</span> 🧠</h1>
+    <p>Real-time sentiment analysis powered by Machine Learning (NLP)</p>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('single')">Single Analysis</button>
+    <button class="tab" onclick="switchTab('batch')">Batch Analysis</button>
+    <button class="tab" onclick="switchTab('api')">API Reference</button>
+  </div>
+
+  <!-- SINGLE ANALYSIS -->
+  <div id="tab-single">
+    <div class="card">
+      <textarea id="single-input" placeholder="Enter any text to analyse its sentiment...
+e.g. 'I absolutely loved this experience, it was fantastic!'" oninput="updateCharCount()"></textarea>
+      <div class="char-count"><span id="char-count">0</span> characters</div>
+
+      <div class="examples">
+        <p>Try an example:</p>
+        <div class="example-chips">
+          <span class="chip" onclick="setExample('I absolutely love this product! It exceeded all my expectations.')">😊 Positive</span>
+          <span class="chip" onclick="setExample('This is the worst experience I have ever had. Completely disappointed.')">😞 Negative</span>
+          <span class="chip" onclick="setExample('The product is okay. Nothing special but it does the job.')">😐 Neutral</span>
+          <span class="chip" onclick="setExample('The customer service was outstanding but the delivery was late.')">🤔 Mixed</span>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn-primary" id="analyse-btn" onclick="analyseSingle()">Analyse Sentiment →</button>
+        <button class="btn-secondary" onclick="clearSingle()">Clear</button>
+      </div>
+      <div class="loader" id="single-loader">⏳ Analysing...</div>
+      <div class="error-msg" id="single-error"></div>
+    </div>
+
+    <div class="result card" id="single-result">
+      <div id="result-badge" class="result-badge"></div>
+      <div class="confidence-label">Confidence Score</div>
+      <div class="bar-wrap"><div class="bar-fill" id="conf-bar"></div></div>
+      <div class="prob-grid">
+        <div class="prob-box">
+          <div class="val pos-val" id="prob-pos">—</div>
+          <div class="lbl">Positive</div>
+        </div>
+        <div class="prob-box">
+          <div class="val neu-val" id="prob-neu">—</div>
+          <div class="lbl">Neutral</div>
+        </div>
+        <div class="prob-box">
+          <div class="val neg-val" id="prob-neg">—</div>
+          <div class="lbl">Negative</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BATCH ANALYSIS -->
+  <div id="tab-batch" style="display:none;">
+    <div class="card">
+      <textarea class="batch-input" id="batch-input" placeholder="Enter one text per line:
+I loved this product!
+Terrible experience, very disappointed.
+It was okay, nothing special.
+Amazing quality and fast shipping!"></textarea>
+      <div class="batch-hint">One sentence per line. Max 20 texts at once.</div>
+      <div class="btn-row" style="margin-top:12px;">
+        <button class="btn-primary" onclick="analyseBatch()">Analyse All →</button>
+        <button class="btn-secondary" onclick="document.getElementById('batch-input').value=''">Clear</button>
+      </div>
+      <div class="loader" id="batch-loader">⏳ Analysing batch...</div>
+      <div class="error-msg" id="batch-error"></div>
+    </div>
+    <div class="batch-results" id="batch-results"></div>
+  </div>
+
+  <!-- API REFERENCE -->
+  <div id="tab-api" style="display:none;">
+    <div class="card">
+      <p style="font-size:14px;font-weight:500;margin-bottom:16px;">REST API Endpoints</p>
+
+      <p style="font-size:12px;color:#888;margin-bottom:4px;">GET / — Health check</p>
+      <div class="api-box"><pre>curl http://localhost:8000/</pre></div>
+
+      <p style="font-size:12px;color:#888;margin-bottom:4px;margin-top:16px;">POST /predict — Single text</p>
+      <div class="api-box"><pre>curl -X POST "http://localhost:8000/predict" \
+  -H "Content-Type: application/json" \
+  -d '{"text": "I love this product!"}'
+
+// Response:
+{
+  "text": "I love this product!",
+  "sentiment": "Positive",
+  "confidence": 94.2,
+  "probabilities": {
+    "negative": 2.1,
+    "neutral": 3.7,
+    "positive": 94.2
+  }
+}</pre></div>
+
+      <p style="font-size:12px;color:#888;margin-bottom:4px;margin-top:16px;">POST /predict/batch — Multiple texts</p>
+      <div class="api-box"><pre>curl -X POST "http://localhost:8000/predict/batch" \
+  -H "Content-Type: application/json" \
+  -d '{"texts": ["Great!", "Terrible.", "It was okay."]}'</pre></div>
+
+      <p style="font-size:12px;color:#888;margin-top:16px;">📄 Full Swagger docs: <a href="http://localhost:8000/docs" target="_blank" style="color:#534AB7;">http://localhost:8000/docs</a></p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const API = 'http://localhost:8000';
+
+  function switchTab(tab) {
+    ['single','batch','api'].forEach(t => {
+      document.getElementById(`tab-${t}`).style.display = t === tab ? '' : 'none';
+    });
+    document.querySelectorAll('.tab').forEach((el, i) => {
+      el.classList.toggle('active', ['single','batch','api'][i] === tab);
+    });
+  }
+
+  function updateCharCount() {
+    const len = document.getElementById('single-input').value.length;
+    document.getElementById('char-count').textContent = len;
+  }
+
+  function setExample(text) {
+    document.getElementById('single-input').value = text;
+    updateCharCount();
+  }
+
+  function clearSingle() {
+    document.getElementById('single-input').value = '';
+    document.getElementById('char-count').textContent = '0';
+    document.getElementById('single-result').style.display = 'none';
+    document.getElementById('single-error').style.display = 'none';
+  }
+
+  async function analyseSingle() {
+    const text = document.getElementById('single-input').value.trim();
+    if (!text) return;
+
+    document.getElementById('analyse-btn').disabled = true;
+    document.getElementById('single-loader').style.display = 'block';
+    document.getElementById('single-result').style.display = 'none';
+    document.getElementById('single-error').style.display = 'none';
+
+    try {
+      const res = await fetch(`${API}/predict`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      });
+      if (!res.ok) throw new Error((await res.json()).detail);
+      const data = await res.json();
+      renderResult(data);
+    } catch (err) {
+      const errEl = document.getElementById('single-error');
+      errEl.textContent = `Error: ${err.message}. Make sure the FastAPI backend is running on port 8000.`;
+      errEl.style.display = 'block';
+    } finally {
+      document.getElementById('analyse-btn').disabled = false;
+      document.getElementById('single-loader').style.display = 'none';
+    }
+  }
+
+  function renderResult(data) {
+    const sentiment = data.sentiment;
+    const conf = data.confidence;
+    const probs = data.probabilities;
+
+    const emojiMap = { Positive: '😊', Negative: '😞', Neutral: '😐' };
+    const classMap = { Positive: 'badge-positive', Negative: 'badge-negative', Neutral: 'badge-neutral' };
+    const barMap   = { Positive: 'fill-positive', Negative: 'fill-negative', Neutral: 'fill-neutral' };
+
+    const badge = document.getElementById('result-badge');
+    badge.textContent = `${emojiMap[sentiment]} ${sentiment} — ${conf}% confidence`;
+    badge.className = `result-badge ${classMap[sentiment]}`;
+
+    const bar = document.getElementById('conf-bar');
+    bar.style.width = `${conf}%`;
+    bar.className = `bar-fill ${barMap[sentiment]}`;
+
+    document.getElementById('prob-pos').textContent = `${probs.positive}%`;
+    document.getElementById('prob-neu').textContent = `${probs.neutral}%`;
+    document.getElementById('prob-neg').textContent = `${probs.negative}%`;
+
+    document.getElementById('single-result').style.display = 'block';
+  }
+
+  async function analyseBatch() {
+    const raw = document.getElementById('batch-input').value.trim();
+    if (!raw) return;
+    const texts = raw.split('\n').map(t => t.trim()).filter(Boolean).slice(0, 20);
+
+    document.getElementById('batch-loader').style.display = 'block';
+    document.getElementById('batch-results').style.display = 'none';
+    document.getElementById('batch-error').style.display = 'none';
+
+    try {
+      const res = await fetch(`${API}/predict/batch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ texts })
+      });
+      if (!res.ok) throw new Error((await res.json()).detail);
+      const data = await res.json();
+      renderBatch(data.results);
+    } catch (err) {
+      const errEl = document.getElementById('batch-error');
+      errEl.textContent = `Error: ${err.message}. Make sure the FastAPI backend is running on port 8000.`;
+      errEl.style.display = 'block';
+    } finally {
+      document.getElementById('batch-loader').style.display = 'none';
+    }
+  }
+
+  function renderBatch(results) {
+    const colorMap = { Positive: '#E1F5EE', Negative: '#FAECE7', Neutral: '#F1EFE8' };
+    const textMap  = { Positive: '#085041', Negative: '#712B13', Neutral: '#444441' };
+    const emojiMap = { Positive: '😊', Negative: '😞', Neutral: '😐' };
+    const el = document.getElementById('batch-results');
+    el.innerHTML = `<p style="font-size:12px;color:#888;margin-bottom:10px;">${results.length} results</p>` +
+      results.map(r => `
+        <div class="batch-item">
+          <span class="batch-text">${r.text}</span>
+          <span class="mini-badge" style="background:${colorMap[r.sentiment]};color:${textMap[r.sentiment]};">
+            ${emojiMap[r.sentiment]} ${r.sentiment} ${r.confidence}%
+          </span>
+        </div>`).join('');
+    el.style.display = 'block';
+  }
+</script>
+</body>
+</html>
